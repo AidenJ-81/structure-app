@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/beam", "destination": "/beam/" },
+    { "source": "/column", "destination": "/column/" }
+  ]
+}
