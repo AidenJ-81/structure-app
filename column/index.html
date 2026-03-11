@@ -1,1 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#b45309">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="기둥배근검토">
+<meta name="description" content="기둥 철근 직경 및 강도 변경에 따른 배근 조정 계산기">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>기둥 배근 검토 계산기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d14;
+    --surface: #13172280;
+    --surface-solid: #131722;
+    --surface2: #1c2133;
+    --border: #252d45;
+    --border-light: #2e3a5a;
+    --accent: #fbbf24;
+    --accent2: #86efac;
+    --warn: #fb923c;
+    --danger: #ef5350;
+    --text: #e8edf8;
+    --text2: #8892b0;
+    --text3: #4a5568;
+    --input-bg: #0d1018;
+    --ok: #66bb6a;
+    --blue: #b45309;
+    --blue2: #d97706;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
 
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(251,191,36,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(251,191,36,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app-shell { position: relative; z-index: 1; }
+
+  .app-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,13,20,0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+  }
+  .header-inner {
+    max-width: 720px; margin: 0 auto;
+    display: flex; align-items: center; gap: 12px;
+    height: 56px;
+  }
+  .header-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header-title { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.3px; }
+  .header-sub { font-size: 0.7rem; color: var(--text2); margin-top: 1px; }
+
+  .install-banner {
+    display: none; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, rgba(180,83,9,0.3), rgba(180,83,9,0.1));
+    border: 1px solid rgba(251,191,36,0.2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin: 12px 16px 0;
+    max-width: calc(720px - 32px);
+    margin-left: auto; margin-right: auto;
+    font-size: 0.82rem;
+  }
+  .install-banner.show { display: flex; }
+  .install-banner span { flex: 1; color: var(--text2); }
+  .install-banner strong { color: var(--accent); }
+  .btn-install {
+    background: var(--blue); color: white; border: none;
+    border-radius: 6px; padding: 6px 14px;
+    font-size: 0.8rem; font-family: inherit; font-weight: 600; cursor: pointer;
+  }
+
+  .main { max-width: 720px; margin: 0 auto; padding: 20px 16px 100px; }
+
+  .card {
+    background: var(--surface);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px; overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .step-badge {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    color: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .card-title { font-weight: 600; font-size: 0.9rem; }
+  .card-body { padding: 18px; }
+
+  .field-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 0.75rem; color: var(--text2); font-weight: 500; }
+
+  .input-wrap {
+    display: flex; align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(251,191,36,0.1);
+  }
+  .input-wrap.hl-yellow { border-color: rgba(255,202,40,0.4); background: rgba(255,202,40,0.04); }
+  .input-wrap.hl-green  { border-color: rgba(134,239,172,0.4); background: rgba(134,239,172,0.04); }
+
+  input[type="number"], select {
+    background: transparent; border: none; color: var(--text);
+    padding: 10px 12px; font-size: 0.9rem; font-family: inherit; width: 100%;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus, select:focus { outline: none; }
+  select { cursor: pointer; }
+
+  .unit-tag {
+    padding: 0 10px; font-size: 0.75rem; color: var(--text3);
+    background: rgba(255,255,255,0.03);
+    border-left: 1px solid var(--border);
+    display: flex; align-items: center; white-space: nowrap; min-width: 38px;
+  }
+
+  .btn-calc-wrap { padding: 4px 0 8px; }
+  .btn-calc {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, #92400e, var(--blue2));
+    color: white; border: none; border-radius: var(--radius);
+    font-size: 1rem; font-weight: 700; font-family: inherit;
+    cursor: pointer; letter-spacing: 0.5px;
+    position: relative; overflow: hidden; transition: all 0.2s;
+  }
+  .btn-calc::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .btn-calc:hover::before { opacity: 1; }
+  .btn-calc:active { transform: scale(0.98); }
+
+  .results { display: none; }
+  .results.show { display: block; }
+
+  .result-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 14px; overflow: hidden;
+    animation: fadeUp 0.35s ease both;
+  }
+  .result-header {
+    padding: 11px 18px; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 0.85rem; color: var(--text2);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .result-body { padding: 6px 0; }
+
+  .calc-row {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: center; padding: 11px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.04); gap: 12px;
+  }
+  .calc-row:last-child { border-bottom: none; }
+  .calc-row-left { display: flex; flex-direction: column; gap: 3px; }
+  .calc-row-label { font-size: 0.82rem; color: var(--text2); }
+  .calc-row-formula { font-size: 0.73rem; color: var(--text3); font-family: 'Courier New', monospace; }
+  .calc-row-value { font-size: 0.95rem; font-weight: 700; text-align: right; white-space: nowrap; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.82rem; font-weight: 700;
+  }
+  .badge-ok { background: rgba(102,187,106,0.15); color: var(--ok); border: 1px solid rgba(102,187,106,0.3); }
+  .badge-ng { background: rgba(239,83,80,0.15); color: var(--danger); border: 1px solid rgba(239,83,80,0.3); }
+
+  .rebar-chips {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; padding: 14px 18px;
+  }
+  .chip {
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+  }
+  .chip-val { font-size: 0.95rem; font-weight: 700; color: var(--accent); }
+  .chip-lbl { font-size: 0.68rem; color: var(--text2); margin-top: 3px; }
+
+  .conclusion {
+    border-radius: var(--radius); padding: 20px 18px;
+    text-align: center; font-size: 0.9rem; font-weight: 600;
+    line-height: 1.8; border: 1px solid; margin-bottom: 16px;
+    animation: fadeUp 0.4s ease both; animation-delay: 0.2s;
+  }
+  .conclusion.pass { background: rgba(102,187,106,0.08); border-color: rgba(102,187,106,0.3); color: var(--ok); }
+  .conclusion.fail { background: rgba(239,83,80,0.08);   border-color: rgba(239,83,80,0.3);   color: var(--danger); }
+
+  .btn-reset {
+    width: 100%; padding: 13px; background: transparent;
+    color: var(--text2); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 0.9rem; font-weight: 500;
+    font-family: inherit; cursor: pointer; transition: all 0.2s; margin-bottom: 20px;
+  }
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface-solid); border: 1px solid var(--border-light);
+    border-radius: 30px; padding: 10px 20px;
+    font-size: 0.82rem; color: var(--text);
+    z-index: 999; transition: transform 0.3s ease; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-icon">🏛️</div>
+      <div>
+        <div class="header-title">기둥 배근 검토 계산기</div>
+        <div class="header-sub">Column Rebar Check Calculator</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="install-banner" id="installBanner">
+    <span>📱 <strong>홈 화면에 추가</strong>하면 앱처럼 사용할 수 있어요</span>
+    <button class="btn-install" id="installBtn">설치</button>
+  </div>
+
+  <main class="main">
+
+    <!-- 1. 설계도면 단면 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">1</div>
+        <div class="card-title">설계도면상 단면 크기 및 배근</div>
+      </div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>기둥 단면 폭 (B)</label>
+            <div class="input-wrap hl-yellow">
+              <input type="number" id="B" value="700" inputmode="numeric">
+              <div class="unit-tag">mm</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>기둥 단면 깊이 (D)</label>
+            <div class="input-wrap hl-yellow">
+              <input type="number" id="D" value="700" inputmode="numeric">
+              <div class="unit-tag">mm</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>콘크리트 강도 (fck)</label>
+            <div class="input-wrap hl-green">
+              <input type="number" id="fck" value="24" inputmode="numeric">
+              <div class="unit-tag">MPa</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>기존 철근 강도 (fy)</label>
+            <div class="input-wrap hl-green">
+              <input type="number" id="fy_orig" value="400" inputmode="numeric">
+              <div class="unit-tag">MPa</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>기존 철근 개수</label>
+            <div class="input-wrap">
+              <input type="number" id="n_orig" value="20" inputmode="numeric">
+              <div class="unit-tag">개</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>기존 철근 직경</label>
+            <div class="input-wrap">
+              <select id="d_orig">
+                <option value="10">D10 (9.53mm)</option>
+                <option value="13">D13 (12.7mm)</option>
+                <option value="16">D16 (15.9mm)</option>
+                <option value="19">D19 (19.1mm)</option>
+                <option value="22">D22 (22.2mm)</option>
+                <option value="25" selected>D25 (25.4mm)</option>
+                <option value="29">D29 (28.6mm)</option>
+                <option value="32">D32 (31.8mm)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>띠철근 직경</label>
+            <div class="input-wrap">
+              <select id="d_tie">
+                <option value="10">D10 (9.53mm)</option>
+                <option value="13" selected>D13 (12.7mm)</option>
+                <option value="16">D16 (15.9mm)</option>
+                <option value="19">D19 (19.1mm)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>피복두께</label>
+            <div class="input-wrap">
+              <input type="number" id="cover" value="40" inputmode="numeric">
+              <div class="unit-tag">mm</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 변경 예정 철근 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">2</div>
+        <div class="card-title">변경 예정 철근 강도 및 직경</div>
+      </div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field">
+            <label>변경 철근 강도 (fy')</label>
+            <div class="input-wrap hl-yellow">
+              <input type="number" id="fy_new" value="500" inputmode="numeric">
+              <div class="unit-tag">MPa</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>변경 철근 직경</label>
+            <div class="input-wrap">
+              <select id="d_new">
+                <option value="10">D10 (9.53mm)</option>
+                <option value="13">D13 (12.7mm)</option>
+                <option value="16">D16 (15.9mm)</option>
+                <option value="19">D19 (19.1mm)</option>
+                <option value="22" selected>D22 (22.2mm)</option>
+                <option value="25">D25 (25.4mm)</option>
+                <option value="29">D29 (28.6mm)</option>
+                <option value="32">D32 (31.8mm)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>변경 후 철근 개수</label>
+            <div class="input-wrap">
+              <input type="number" id="n_new" value="22" inputmode="numeric">
+              <div class="unit-tag">개</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>골재 최대치수</label>
+            <div class="input-wrap">
+              <select id="agg_size">
+                <option value="20">20mm</option>
+                <option value="25" selected>25mm</option>
+                <option value="40">40mm</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-calc-wrap">
+      <button class="btn-calc" onclick="calculate()">🔍 배근 검토 계산하기</button>
+    </div>
+
+    <!-- 결과 -->
+    <div class="results" id="results">
+
+      <div class="result-card">
+        <div class="result-header">📐 사용 철근 제원</div>
+        <div class="rebar-chips" id="rebarChips"></div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-header">① 최소 철근 간격 검토</div>
+        <div class="result-body" id="spacingResult"></div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-header">② 최대 철근비 검토</div>
+        <div class="result-body" id="ratioResult"></div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-header">③ 최소 철근비 검토</div>
+        <div class="result-body" id="minRatioResult"></div>
+      </div>
+
+      <div id="conclusionBox"></div>
+
+      <button class="btn-reset" onclick="resetForm()">↩ 새로 계산하기</button>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const rebarDia  = { 10:9.53, 13:12.7, 16:15.9, 19:19.1, 22:22.2, 25:25.4, 29:28.6, 32:31.8 };
+const rebarArea = { 10:71.33, 13:126.7, 16:198.6, 19:286.5, 22:387.1, 25:506.7, 29:642.4, 32:794.2 };
+
+function v(id) { return +document.getElementById(id).value; }
+
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function calcRow(label, formula, valueStr, color, isBadge, badgeOk) {
+  const valHtml = isBadge
+    ? `<span class="badge ${badgeOk ? 'badge-ok' : 'badge-ng'}">${badgeOk ? '✓ O.K' : '✗ N.G'}</span>`
+    : `<span class="calc-row-value" style="color:${color||'var(--accent)'}">${valueStr}</span>`;
+  return `
+    <div class="calc-row">
+      <div class="calc-row-left">
+        <div class="calc-row-label">${label}</div>
+        ${formula ? `<div class="calc-row-formula">${formula}</div>` : ''}
+      </div>
+      ${valHtml}
+    </div>`;
+}
+
+function calculate() {
+  const B       = v('B');
+  const D       = v('D');
+  const fck     = v('fck');
+  const fy_orig = v('fy_orig');
+  const n_orig  = v('n_orig');
+  const d_orig  = v('d_orig');
+  const ds_key  = v('d_tie');
+  const fy_new  = v('fy_new');
+  const d_new   = v('d_new');
+  const n_new   = v('n_new');
+  const cover   = v('cover');
+  const agg     = v('agg_size');
+
+  const db  = rebarDia[d_new];
+  const ds  = rebarDia[ds_key];
+  const As  = rebarArea[d_new] * n_new;
+  const Ag  = B * D;  // 기둥 전체 단면적
+
+  // ── ① 최소 철근 간격 ──
+  // 기둥 한 면의 철근 수 (4면 배근 가정, 모서리 공유)
+  // 순간격 = (기둥폭 - 피복*2 - 띠철근*2 - 철근직경*n면) / (n면-1)
+  // 한 면의 철근 개수 = 전체 / 4 + 1 (모서리 포함)
+  const n_side  = Math.round(n_new / 4) + 1;   // 한 변의 철근 수
+  const clearW  = B - 2*cover - 2*ds - n_side*db;
+  const s_clear = n_side > 1 ? clearW / (n_side - 1) : clearW;
+
+  // KDS 기준: Max[40mm, 1.5db, 4/3×골재]
+  const s_min   = Math.max(40, 1.5*db, (4/3)*agg);
+  const spacing_ok = s_clear >= s_min;
+
+  // ── ② 최대 철근비 ρmax ≤ 0.08 (KDS 기둥 기준) ──
+  const rho_max  = 0.08;
+  const rho_act  = As / Ag;
+  const ratio_ok = rho_act <= rho_max;
+
+  // ── ③ 최소 철근비 ρmin ≥ 0.01 (KDS 기둥 기준) ──
+  const rho_min  = 0.01;
+  const min_ratio_ok = rho_act >= rho_min;
+
+  // ── 결과 출력 ──
+  document.getElementById('rebarChips').innerHTML = `
+    <div class="chip"><div class="chip-val">D${d_new} (${db}mm)</div><div class="chip-lbl">변경 철근 직경</div></div>
+    <div class="chip"><div class="chip-val">${n_new}개</div><div class="chip-lbl">변경 후 개수</div></div>
+    <div class="chip"><div class="chip-val">${As.toFixed(0)}mm²</div><div class="chip-lbl">전체 단면적</div></div>
+    <div class="chip"><div class="chip-val">${Ag.toFixed(0)}mm²</div><div class="chip-lbl">기둥 단면적</div></div>
+    <div class="chip"><div class="chip-val">D${ds_key} (${ds}mm)</div><div class="chip-lbl">띠철근 직경</div></div>
+    <div class="chip"><div class="chip-val">${cover}mm</div><div class="chip-lbl">피복두께</div></div>
+  `;
+
+  document.getElementById('spacingResult').innerHTML =
+    calcRow('한 변의 철근 수 (모서리 포함)',
+      `전체 ${n_new}개 ÷ 4면 + 1(모서리) ≈ ${n_side}개`,
+      `${n_side}개`, 'var(--text2)') +
+    calcRow('철근 순간격',
+      `[기둥폭 - 피복×2 - 띠철근×2 - db×${n_side}] / (${n_side}-1)`,
+      `${s_clear.toFixed(1)} mm`, 'var(--accent)') +
+    calcRow('최소간격 기준 (KDS)',
+      `Max[40mm, 1.5×db ${(1.5*db).toFixed(1)}mm, 4/3×${agg}mm ${((4/3)*agg).toFixed(1)}mm]`,
+      `${s_min.toFixed(1)} mm`, 'var(--warn)') +
+    calcRow(`순간격 ${s_clear.toFixed(1)}mm ${spacing_ok?'≥':'<'} 최소간격 ${s_min.toFixed(1)}mm`,
+      '', '', '', true, spacing_ok);
+
+  document.getElementById('ratioResult').innerHTML =
+    calcRow('실제 철근비 (ρ)',
+      `As/Ag = ${As.toFixed(0)} / ${Ag.toFixed(0)}`,
+      rho_act.toFixed(4), 'var(--accent)') +
+    calcRow('최대 철근비 기준 (KDS)',
+      'ρmax = 0.08 (기둥)',
+      '0.0800', 'var(--warn)') +
+    calcRow(`ρ ${rho_act.toFixed(4)} ${ratio_ok?'≤':'>'} ρmax 0.0800`,
+      '', '', '', true, ratio_ok);
+
+  document.getElementById('minRatioResult').innerHTML =
+    calcRow('실제 철근비 (ρ)',
+      `As/Ag = ${As.toFixed(0)} / ${Ag.toFixed(0)}`,
+      rho_act.toFixed(4), 'var(--accent)') +
+    calcRow('최소 철근비 기준 (KDS)',
+      'ρmin = 0.01 (기둥)',
+      '0.0100', 'var(--warn)') +
+    calcRow(`ρ ${rho_act.toFixed(4)} ${min_ratio_ok?'≥':'<'} ρmin 0.0100`,
+      '', '', '', true, min_ratio_ok);
+
+  const all_ok = spacing_ok && ratio_ok && min_ratio_ok;
+  const fails = [
+    !spacing_ok    && '최소간격 미달',
+    !ratio_ok      && '최대철근비 초과',
+    !min_ratio_ok  && '최소철근비 미달'
+  ].filter(Boolean);
+
+  document.getElementById('conclusionBox').innerHTML = all_ok
+    ? `<div class="conclusion pass">
+        ✅ 기둥 배근 <strong>${n_orig}개 - D${d_orig}(SD${fy_orig})</strong> 은<br>
+        <strong>${n_new}개 - D${d_new}(SD${fy_new})</strong> 으로 변경 가능합니다.
+       </div>`
+    : `<div class="conclusion fail">
+        ❌ ${fails.join(', ')} — N.G<br>
+        구조담당자 검토를 요청하십시오.
+       </div>`;
+
+  document.getElementById('results').classList.add('show');
+  setTimeout(() => {
+    document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 100);
+}
+
+function resetForm() {
+  document.getElementById('results').classList.remove('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// PWA 설치
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') showToast('✅ 앱이 설치되었습니다!');
+  deferredPrompt = null;
+  document.getElementById('installBanner').classList.remove('show');
+});
+window.addEventListener('appinstalled', () => showToast('🎉 홈 화면에 추가되었습니다!'));
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

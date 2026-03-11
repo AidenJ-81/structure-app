@@ -1,0 +1,16 @@
+{
+  "name": "기둥 배근 검토 계산기",
+  "short_name": "기둥배근",
+  "description": "기둥 철근 직경 및 강도 변경에 따른 배근 조정 계산기",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0d14",
+  "theme_color": "#b45309",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "ko"
+}
